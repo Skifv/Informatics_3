@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[], char *envp[])
 { 
-(void) execle("/bin/cat", "/bin/cat", "03-2.cpp", 0, envp);
+execle("/bin/cat", "/bin/cat", "03-2.cpp", 0, envp);
 
 printf("Error on program start\n");
 exit(-1);
