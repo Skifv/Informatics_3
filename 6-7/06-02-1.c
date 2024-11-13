@@ -16,6 +16,7 @@ void *mythread1(void *dummy)
 
    a = a-10;
 
+
    printf("Thread 1: %lu, Calculation result = %d\n", mythid, a);
 
    return NULL;

@@ -6,13 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 100
+#define N 10000
 
 int main() 
 { 
    char *  array;   // передаваемая строка
    int     shmid;   // возвращаемое значение shmget
-   char    pathname[] = "06-1a.c"; 
+   char    pathname[] = "06-1-2a.c"; 
    key_t   key;     // ключ для файла
 
    if((key = ftok(pathname,0)) < 0){
@@ -20,7 +20,8 @@ int main()
      exit(-1);
    }
 
-   if((shmid = shmget(key, N*sizeof(char), 0666|IPC_CREAT)) < 0){
+   if((shmid = shmget(key, N*sizeof(char), 0666)) < 0){
+    perror("shmid");
     printf("Can\'t create shared memory\n");
     exit(-1);
    }

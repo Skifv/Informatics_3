@@ -132,11 +132,25 @@ int main()
 
       while(ready[1-CURRENT_PROCESS] && turn[0] == 1-CURRENT_PROCESS); 
 
-      printf("ready[1-...] = %d, turn[0] = %d\n", ready[1-CURRENT_PROCESS], turn[0]);
+      //printf("ready[1-...] = %d, turn[0] = %d\n", ready[1-CURRENT_PROCESS], turn[0]);
 
       prn
    
       array[1] += 1;
+
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      for(i=0; i<2000000000L; i++);
+      
       array[2] += 1;
    }
  

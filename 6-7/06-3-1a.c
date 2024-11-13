@@ -119,7 +119,7 @@ int main()
 
    // выполняем программу
 
-   if(array_new && ready_new){
+   if(array_new || ready_new){
       array[0] =  1;
       array[1] =  0;
       array[2] =  1;
@@ -131,7 +131,10 @@ int main()
       ready[CURRENT_PROCESS] = 1; 
       turn[0] = 1 - CURRENT_PROCESS;
 
-      while(ready[1-CURRENT_PROCESS] && turn[0] == 1-CURRENT_PROCESS); 
+      while((ready[1-CURRENT_PROCESS] == 1) && (turn[0] == 1-CURRENT_PROCESS))
+      {
+         ;
+      } 
    
       array[0] += 1;
 
