@@ -74,10 +74,11 @@ int main()
    
    if (new_sem)
    {
-      if(semop(semid, &V, 1) < 0){
+      if(semop(semid, &V, 1) < 0)
+      {
       printf("Can\'t add 1 to semaphore\n");
       exit(-1);
-    }  
+      }  
    }
    else
    {
