@@ -36,7 +36,7 @@ struct Semaphore
             long id;             // id процесса-клиента
 
             unsigned int sem_op; // V - V(S), P - P(S)
-            unsigned int * sem;  // указатель на разделяемую память с семафором
+            struct Semaphore *sem;  // указатель на разделяемую память с семафором
         } message;
     };
 
@@ -52,8 +52,8 @@ struct Semaphore
 int get_message_queue(char *pathname, int project_id);
 struct Semaphore create_semaphore(char *pathname, int project_id, int init_value);
 
-void sem_V(unsigned int *semaphore);
-void sem_P(unsigned int *semaphore);
+void sem_V(struct Semaphore *semaphore);
+void sem_P(struct Semaphore *semaphore);
 
 
 int main(void)
@@ -67,7 +67,7 @@ int main(void)
 
     printf("%d\n", *sem.semaphore);
 
-    sem_V(&sem.semaphore);
+    sem_V(&sem);
     
     printf("%d\n", *sem.semaphore);
 
@@ -137,7 +137,7 @@ struct Semaphore create_semaphore(char *pathname, int project_id, int init_value
     return res;
 }
 
-void sem_V(unsigned int *semaphore)
+void sem_V(struct Semaphore *semaphore)
 {
     char pathname[]="sem_server.c";
     int project_id = 0;
@@ -158,6 +158,17 @@ void sem_V(unsigned int *semaphore)
     // сообщение от сервера
     struct server server_msg;
 
+
+    printf("sem_V:\n");
+    printf("  msqid = %d\n", msqid);
+    printf("  client_msg.mtype = %ld\n", client_msg.mtype);
+    printf("  client_msg.message.id = %ld\n", client_msg.message.id);
+    printf("  client_msg.message.sem_op = %u\n", client_msg.message.sem_op);
+    printf("  client_msg.message.sem = %p\n", (void *)client_msg.message.sem);
+    printf("  client_msg.message.sem->shmid = %d\n", client_msg.message.sem->shmid);
+    printf("  *(client_msg.message.sem->semaphore) = %u\n", *(client_msg.message.sem->semaphore));
+    printf("  server_msg = %p\n", (void *)&server_msg);
+
     // отправляемое сообщение
     if(msgsnd(msqid, (struct msgbuf *) &client_msg, sizeof(client_msg.message), 0) < 0){
        perror("msgsend");
@@ -173,7 +184,7 @@ void sem_V(unsigned int *semaphore)
     return;    
 }
 
-void sem_P(unsigned int *semaphore)
+void sem_P(struct Semaphore *semaphore)
 {
     char pathname[]="sem_server.c";
     int project_id = 0;
