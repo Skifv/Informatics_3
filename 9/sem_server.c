@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/shm.h>
+#include <errno.h>
 
 #if 1
 #define prn fprintf(stderr, "%d: %s\n", __LINE__, __func__);
@@ -31,11 +33,7 @@ typedef struct Queue {
     QueueNode* rear;   // Указатель на конец очереди
 } Queue;
 
-struct Semaphore
-{
-    int shmid;
-    unsigned int *semaphore;
-};
+
 
 /* Схема клиент-сервер */
 
@@ -46,18 +44,17 @@ struct Semaphore
             long id;             // id процесса-клиента
 
             unsigned int sem_op; // V - V(S), P - P(S)
-            struct Semaphore *sem;  // указатель на разделяемую память с семафором
+            int shmid;
+            unsigned int *semaphore;
         } message;
     };
 
     struct server 
     {
         long mtype;
-        struct 
-        {
-            int nothing; // не отвечает ничего, длина 0
-        } message;
-   };
+
+        int message;
+    };
 
 int get_message_queue(char *pathname, int project_id);
 
@@ -66,6 +63,7 @@ void enqueue(Queue* q, int client_id, int semaphore_number);
 int dequeue(Queue* q, int* client_id, int* semaphore_number);
 int isQueueEmpty(Queue* q);
 void freeQueue(Queue* q);
+
 int removeNode(Queue* q, int client_id, int* semaphore_number);
 int find_client(Queue* q, int sem_id, long int* client_id);
 
@@ -87,8 +85,6 @@ int main(void)
 
     printf("Server is on, waiting requests.\n");
 
-    int shm1;
-
     while(1)
     {
         // Get the next message from a client
@@ -96,58 +92,84 @@ int main(void)
             perror("msgrcv");
             exit(-1);
         }
-        prn
-        shm1 = client_message.message.sem->shmid;
-        prn
-        printf("shm1 = %d\n", shm1);
+        // attach sem по его id
+        if ((client_message.message.semaphore = (unsigned int *) shmat(client_message.message.shmid, NULL, 0)) == (void *) -1) {
+            perror("shmat");
+            exit(-1);
+        }
 
         // If the operation is V, increment the semaphore value and send a response back to the client
         if (client_message.message.sem_op == V) {
-            printf("Got request from client %ld: V(%d)\n", client_message.message.id, client_message.message.sem->shmid);
+            printf("Got request from client %ld: V(%d)\n", client_message.message.id, client_message.message.shmid);
 
-            *client_message.message.sem->semaphore += 1;
+            *(client_message.message.semaphore) += 1;
 
-            if ((msgsnd(msqid, (struct msgbuf *) &server_message, sizeof(server_message.message), 0)) < 0){
+            server_message.mtype = client_message.message.id;
+
+            if ((msgsnd(msqid, (struct msgbuf *) &server_message, 0, 0)) < 0){
                 perror("msgsnd");
                 exit(-1);
             }
 
             printf("Request from client %ld processed. \n", client_message.message.id);
 
-            // If the client was waiting in the queue, remove it
-            if (find_client(queue, client_message.message.sem->shmid, &client_message.message.id))
+            // If some client with sem was waiting in the queue, remove it
+            if (find_client(queue, client_message.message.shmid, &client_message.message.id))
             {
-                removeNode(queue, client_message.message.id, &client_message.message.sem->shmid);
+                removeNode(queue, client_message.message.id, &client_message.message.shmid);
 
-                *client_message.message.sem->semaphore -= 1;
+                *(client_message.message.semaphore) -= 1;
 
                 server_message.mtype = client_message.message.id;
-                if ((msgsnd(msqid, (struct msgbuf *) &server_message, sizeof(server_message.message), 0)) < 0){
+
+                if ((msgsnd(msqid, (struct msgbuf *) &server_message, 0, 0)) < 0){
                     perror("msgsnd");
                     exit(-1);
                 }
 
                 printf("Request from client %ld processed. \n", client_message.message.id);
             }
+
+            // deteach sem если он не равен NULL
+            if (client_message.message.semaphore != NULL) 
+            {
+                if (shmdt(client_message.message.semaphore) < 0) 
+                {
+                    perror("shmdt");
+                    exit(-1);
+                }
+                client_message.message.semaphore = NULL;
+            }
+
         }
         // If the operation is P, decrement the semaphore value if possible and send a response back to the client
         else if (client_message.message.sem_op == P) {
-            printf("Got request from client %ld: P(%d)\n", client_message.message.id, client_message.message.sem->shmid);
+            printf("Got request from client %ld: P(%d)\n", client_message.message.id, client_message.message.shmid);
 
             // If the semaphore value is greater than 0, decrement it and send a response back to the client
-            if (*client_message.message.sem->semaphore > 0) {
-                *client_message.message.sem->semaphore -= 1;
+            if (*(client_message.message.semaphore) > 0) 
+            {
+                *(client_message.message.semaphore) -= 1;
 
-                if ((msgsnd(msqid, (struct msgbuf *) &server_message, sizeof(server_message.message), 0)) < 0){
+                server_message.mtype = client_message.message.id;
+
+                if ((msgsnd(msqid, (struct msgbuf *) &server_message, 0, 0)) < 0){
                     perror("msgsnd");
                     exit(-1);
                 }
 
                 printf("Request from client %ld processed. \n", client_message.message.id);
+
+                // deteach sem
+                if (shmdt(client_message.message.semaphore) < 0) {
+                    perror("shmdt");
+                    exit(-1);
+                }
+                client_message.message.semaphore = NULL;
             }
             // Otherwise, add the client to the waiting queue
             else {
-                enqueue(queue, client_message.message.id, client_message.message.sem->shmid);
+                enqueue(queue, client_message.message.id, client_message.message.shmid);
             }
         }
     }

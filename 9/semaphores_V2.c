@@ -36,17 +36,16 @@ struct Semaphore
             long id;             // id процесса-клиента
 
             unsigned int sem_op; // V - V(S), P - P(S)
-            struct Semaphore *sem;  // указатель на разделяемую память с семафором
+            int shmid;
+            unsigned int *semaphore;
         } message;
     };
 
     struct server 
     {
         long mtype;
-        struct 
-        {
-            int nothing; // не отвечает ничего, длина 0
-        } message;
+
+        int message;
    };
 
 int get_message_queue(char *pathname, int project_id);
@@ -59,7 +58,7 @@ void sem_P(struct Semaphore *semaphore);
 int main(void)
 { 
     char pathname[]="sem_server.c";
-    int project_id = 0;
+    int project_id = 1;
 
     // создание семафора
     int init_value = 1; 
@@ -122,6 +121,7 @@ struct Semaphore create_semaphore(char *pathname, int project_id, int init_value
         new = 0;
     }
 
+
     unsigned int *semaphore = shmat(shm_id, NULL, 0);
     if (semaphore == (void *) -1) {
         perror("shmat");
@@ -153,21 +153,11 @@ void sem_V(struct Semaphore *semaphore)
 
     // само сообщение
     client_msg.message.sem_op = V;
-    client_msg.message.sem = semaphore;
+    client_msg.message.shmid = semaphore->shmid;
+    client_msg.message.semaphore = NULL;
 
     // сообщение от сервера
     struct server server_msg;
-
-
-    printf("sem_V:\n");
-    printf("  msqid = %d\n", msqid);
-    printf("  client_msg.mtype = %ld\n", client_msg.mtype);
-    printf("  client_msg.message.id = %ld\n", client_msg.message.id);
-    printf("  client_msg.message.sem_op = %u\n", client_msg.message.sem_op);
-    printf("  client_msg.message.sem = %p\n", (void *)client_msg.message.sem);
-    printf("  client_msg.message.sem->shmid = %d\n", client_msg.message.sem->shmid);
-    printf("  *(client_msg.message.sem->semaphore) = %u\n", *(client_msg.message.sem->semaphore));
-    printf("  server_msg = %p\n", (void *)&server_msg);
 
     // отправляемое сообщение
     if(msgsnd(msqid, (struct msgbuf *) &client_msg, sizeof(client_msg.message), 0) < 0){
@@ -200,7 +190,8 @@ void sem_P(struct Semaphore *semaphore)
 
     // само сообщение
     client_msg.message.sem_op = P;
-    client_msg.message.sem = semaphore;
+    client_msg.message.shmid = semaphore->shmid;
+    client_msg.message.semaphore = NULL;
 
     // сообщение от сервера
     struct server server_msg;
