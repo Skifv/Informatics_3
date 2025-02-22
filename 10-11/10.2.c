@@ -16,19 +16,18 @@
 #include <pwd.h>
 #include <grp.h>
 
-#define INITIAL_FILE_COUNT 64 // Начальный размер массива структур из файлов директории
+#define INITIAL_FILE_COUNT 64  // Начальный размер массива структур из файлов директории
 #define MAX_PATH 1024          // Максимальная длина пути к файлу/каталогу
 
 // Структура для хранения информации о файле
 struct myfile {
-    char *name;       // Имя файла
-    struct stat st;   // Структура с метаданными о файле
+    char *name;       
+    struct stat st;   
 };
 
 // Функция для подсчета количества цифр в числе
 int count_digits(unsigned long long number) {
     int digit_count = 0;
-    // Пока число не станет равным нулю, делим его на 10 и увеличиваем счетчик цифр
     do {
         digit_count++;
         number /= 10;
@@ -49,8 +48,7 @@ char get_file_type(mode_t mode) {
 
 // Функция для получения прав доступа к файлу в виде строки
 char *get_file_access(mode_t mode) {
-    static char access[10];  // Строка для записи прав доступа
-    // Проверяем каждый бит прав доступа и устанавливаем соответствующие символы
+    static char access[10];  
     access[0] = (mode & S_IRUSR) ? 'r' : '-';
     access[1] = (mode & S_IWUSR) ? 'w' : '-';
     access[2] = (mode & S_IXUSR) ? 'x' : '-';
@@ -60,23 +58,20 @@ char *get_file_access(mode_t mode) {
     access[6] = (mode & S_IROTH) ? 'r' : '-';
     access[7] = (mode & S_IWOTH) ? 'w' : '-';
     access[8] = (mode & S_IXOTH) ? 'x' : '-';
-    access[9] = '\0'; // Завершающий нулевой символ для строки
+    access[9] = '\0'; 
     return access;
 }
 
 int main(int argc, char *argv[]) {
-    // Проверяем количество аргументов командной строки
     if (argc > 2) {
         fprintf(stderr, "Usage: %s [directory]\n", argv[0]);
-        exit(EXIT_FAILURE);  // Если аргументов больше, чем нужно, завершение программы
+        exit(EXIT_FAILURE);  
     }
 
-    // Если аргумент не передан, устанавливаем текущую директорию как путь
     char *pathname = (argc == 1) ? "." : argv[1];
-    // Открываем указанную директорию
     DIR *directory = opendir(pathname);
     if (!directory) {
-        perror("Can't open directory");  // Ошибка при открытии директории
+        perror("Can't open directory");  
         exit(EXIT_FAILURE);
     }
 
@@ -84,7 +79,7 @@ int main(int argc, char *argv[]) {
     int capacity = INITIAL_FILE_COUNT;  // Начальный размер массива
     struct myfile *files_stat = malloc(capacity * sizeof(struct myfile));
     if (!files_stat) {
-        perror("Memory allocation failed");  // Ошибка при выделении памяти
+        perror("Memory allocation failed");  
         closedir(directory);
         exit(EXIT_FAILURE);
     }
@@ -95,17 +90,13 @@ int main(int argc, char *argv[]) {
 
     struct dirent *entry = NULL;  // Переменная для хранения записи о файле
 
-    // Чтение файлов в директории
     while (entry = readdir(directory)) {
-        
-        // Формируем полный путь к файлу
         char full_path[MAX_PATH];
         snprintf(full_path, sizeof(full_path), "%s/%s", pathname, entry->d_name);
 
         struct stat stat_buffer;  // Буфер для хранения информации о файле/каталоге]
-        // Получаем информацию о файле с помощью stat
         if (stat(full_path, &stat_buffer) == -1) {
-            perror("stat");  // Ошибка при получении информации о файле
+            perror("stat");  
             free(files_stat);
             closedir(directory);
             exit(EXIT_FAILURE);
@@ -113,10 +104,10 @@ int main(int argc, char *argv[]) {
 
         // Увеличиваем размер массива, если нужно
         if (count >= capacity) {
-            capacity *= 2;  // Удваиваем размер массива
+            capacity *= 2;  
             files_stat = realloc(files_stat, capacity * sizeof(struct myfile));
             if (!files_stat) {
-                perror("Memory allocation failed");  // Ошибка при выделении памяти
+                perror("Memory allocation failed"); 
                 closedir(directory);
                 exit(EXIT_FAILURE);
             }
@@ -137,25 +128,24 @@ int main(int argc, char *argv[]) {
     int len_max_links = count_digits(max_links);
     int len_max_size  = count_digits(max_size);
 
-    // Выводим информацию о каждом файле
+    
     for (int i = 0; i < count; i++) {
         // Получаем строку с правами доступа и временем последней модификации
         char *current_file_access = get_file_access(files_stat[i].st.st_mode);
         char *buf_time = ctime(&files_stat[i].st.st_mtime);
         buf_time[strlen(buf_time) - 1] = '\0';  // Удаляем символ новой строки
 
-        // Печатаем информацию о файле в формате, аналогичном команде 'ls -l'
-        printf("%c", get_file_type(files_stat[i].st.st_mode));  // Тип файла
-        printf("%s", current_file_access);                       // Права доступа
-        printf(" %*lu", len_max_links, files_stat[i].st.st_nlink); // Количество жестких ссылок
+
+        printf("%c", get_file_type(files_stat[i].st.st_mode));      // Тип файла
+        printf("%s", current_file_access);                          // Права доступа
+        printf(" %*lu", len_max_links, files_stat[i].st.st_nlink);  // Количество жестких ссылок
         printf(" %s", getpwuid(files_stat[i].st.st_uid)->pw_name);  // Имя владельца файла
         printf(" %s", getgrgid(files_stat[i].st.st_gid)->gr_name);  // Имя группы
-        printf(" %*ld", len_max_size, files_stat[i].st.st_size);   // Размер файла
-        printf(" %s", buf_time);  // Время последней модификации
-        printf(" %s\n", files_stat[i].name);  // Имя файла
+        printf(" %*ld", len_max_size, files_stat[i].st.st_size);    // Размер файла
+        printf(" %s", buf_time);                                    // Время последней модификации
+        printf(" %s\n", files_stat[i].name);                        // Имя файла
     }
 
-    // Освобождаем выделенную память и закрываем директорию
     free(files_stat);
     closedir(directory);
     return 0;

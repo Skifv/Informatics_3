@@ -29,24 +29,22 @@ int get_sem(char *pathname, int project_id, int init_value);
 
 int main(void)
 {
-    // Путь к файлу для генерации ключа для семафора
     char pathname[] = "11.3a.c";
 
     // Создание и инициализация трех семафоров
-    int sem_mutax_id = get_sem(pathname, 0, 1);  // Семофор для управления доступом к критической секции
+    int sem_mutax_id = get_sem(pathname, 0, 1);   // Семофор для управления доступом к критической секции
     int sem_wait_a_id = get_sem(pathname, 3, 0);  // Семофор для синхронизации с процессом A
     int sem_wait_b_id = get_sem(pathname, 4, 0);  // Семофор для синхронизации с процессом B
 
     // Инициализация операций над семафорами
     P.sem_num = 0;
-    P.sem_op = -1;  // Операция захвата семафора (уменьшение)
+    P.sem_op = -1;  // (уменьшение)
     P.sem_flg = 0;
 
     V.sem_num = 0;
-    V.sem_op = 1;  // Операция освобождения семафора (увеличение)
+    V.sem_op = 1;  // (увеличение)
     V.sem_flg = 0;
 
-    // Путь к файлу для обмена данными между процессами
     char * buffer_path = "./buffers/buffer.txt";
     
     // Открытие файла для чтения и записи, создание файла при его отсутствии
@@ -57,18 +55,15 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-    // Установка размера файла
     ftruncate(fd, BUFFER_SIZE);
 
     // Отображение файла в память
     char * buffer = mmap(NULL, BUFFER_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (buffer == MAP_FAILED) 
+    if (buffer == MAP_FAILED)
     {
         perror("mmap");
         exit(EXIT_FAILURE);
     }
-
-    // Закрытие дескриптора файла, так как он больше не нужен
     close(fd);
 
     // Переменная для хранения сообщения
@@ -76,15 +71,13 @@ int main(void)
 
     // Начало работы с семафорами, захват семафора для критической секции
     semop(sem_mutax_id, &P, 1);
-
-    // Отправка и получение 3 сообщений
     for (int i = 1; i <= N; i++)
     {        
         // Формирование сообщения
         snprintf(message, BUFFER_SIZE, "A. Hello B! %d", i);
         strncpy(buffer, message, BUFFER_SIZE);  // Копирование сообщения в буфер
 
-        // Освобождение семафора для критической секции, сигнал процессу A
+        // сигнал процессу b
         semop(sem_mutax_id, &V, 1);
         
         // Ожидание от процесса A перед отправкой
